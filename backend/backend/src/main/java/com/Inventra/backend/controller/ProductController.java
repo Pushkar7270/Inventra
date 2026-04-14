@@ -37,7 +37,7 @@ public class ProductController {
     public void deleteProduct(@PathVariable Long id){
         productService.deleteProduct(id);
     }
-    @GetMapping("/slu/{skuCode}")
+    @GetMapping("/sku/{skuCode}")
     public Product getProductBySku(@PathVariable String skuCode){
         return productService.getProductbySku(skuCode);
     }

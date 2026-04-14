@@ -1,17 +1,21 @@
 package com.Inventra.backend.Entity;
 
 import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 
 @Entity
 public class Product{
     @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     private String name;
     private String skuCode;
     private Double price;
     private Integer currentStock;
     private Integer reorderThreshold;
+    public Product(){}
 
     public Product(Long id, String name, String skuCode, Double price, Integer currentStock, Integer reorderThreshold) {
         this.id = id;
