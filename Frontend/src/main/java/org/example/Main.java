@@ -14,20 +14,20 @@ public class Main {
         }
 
         // Global FlatLaf tweaks to match our custom palette
-        UIManager.put("Panel.background",           Theme.BG_PANEL);
-        UIManager.put("OptionPane.background",      Theme.BG_PANEL);
-        UIManager.put("OptionPane.messageForeground",Theme.TEXT_PRI);
-        UIManager.put("TextField.background",       Theme.BG_ROW);
-        UIManager.put("TextField.foreground",       Theme.TEXT_PRI);
-        UIManager.put("TextField.caretForeground",  Theme.ACCENT);
-        UIManager.put("TextField.selectionBackground", Theme.ACCENT);
-        UIManager.put("Label.foreground",           Theme.TEXT_SEC);
+        UIManager.put("Panel.background",           org.example.Theme.BG_PANEL);
+        UIManager.put("OptionPane.background",      org.example.Theme.BG_PANEL);
+        UIManager.put("OptionPane.messageForeground", org.example.Theme.TEXT_PRI);
+        UIManager.put("TextField.background",       org.example.Theme.BG_ROW);
+        UIManager.put("TextField.foreground",       org.example.Theme.TEXT_PRI);
+        UIManager.put("TextField.caretForeground",  org.example.Theme.ACCENT);
+        UIManager.put("TextField.selectionBackground", org.example.Theme.ACCENT);
+        UIManager.put("Label.foreground",           org.example.Theme.TEXT_SEC);
         UIManager.put("Button.arc",                 8);
         UIManager.put("Component.arc",              8);
-        UIManager.put("ScrollBar.thumb",            Theme.BG_ROW);
+        UIManager.put("ScrollBar.thumb",            org.example.Theme.BG_ROW);
         UIManager.put("ScrollBar.width",            8);
-        UIManager.put("TitlePane.background",       Theme.BG_DEEP);
-        UIManager.put("TitlePane.foreground",       Theme.TEXT_PRI);
+        UIManager.put("TitlePane.background",       org.example.Theme.BG_DEEP);
+        UIManager.put("TitlePane.foreground",       org.example.Theme.TEXT_PRI);
 
         SwingUtilities.invokeLater(() -> {
             JFrame frame = new JFrame("Inventra");

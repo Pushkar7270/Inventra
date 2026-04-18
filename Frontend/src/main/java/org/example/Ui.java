@@ -142,7 +142,7 @@ public final class UI {
         header.setForeground(Theme.TEXT_SEC);
         header.setFont(Theme.FONT_SMALL);
         header.setBorder(BorderFactory.createMatteBorder(0, 0, 1, 0, Theme.BORDER));
-        Component renderer = header.getDefaultRenderer();
+        javax.swing.table.TableCellRenderer renderer = header.getDefaultRenderer();
         if (renderer instanceof DefaultTableCellRenderer) {
             ((DefaultTableCellRenderer) renderer).setHorizontalAlignment(SwingConstants.LEFT);
         }
@@ -301,4 +301,3 @@ public final class UI {
         }
     }
 }
-

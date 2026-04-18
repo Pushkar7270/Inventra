@@ -7,26 +7,26 @@ import java.nio.file.*;
 
 public class ExportsPanel extends JPanel {
 
-    private final JLabel statusLabel = UI.label("Ready to export.");
+    private final JLabel statusLabel = org.example.UI.label("Ready to export.");
 
     public ExportsPanel() {
         setLayout(new GridBagLayout());
         setOpaque(false);
 
-        JPanel card = UI.card(new BorderLayout(0, 24));
+        JPanel card = org.example.UI.card(new BorderLayout(0, 24));
         card.setPreferredSize(new Dimension(480, 300));
 
-        JLabel title = UI.title("📊  Reports & Exports");
-        JLabel sub   = UI.label("Download sales data and transaction records");
+        JLabel title = org.example.UI.title("📊  Reports & Exports");
+        JLabel sub   = org.example.UI.label("Download sales data and transaction records");
 
-        JPanel titleBlock = UI.panel(new BorderLayout(0, 4));
+        JPanel titleBlock = org.example.UI.panel(new BorderLayout(0, 4));
         titleBlock.add(title, BorderLayout.NORTH);
         titleBlock.add(sub, BorderLayout.SOUTH);
 
-        JPanel buttons = UI.panel(new GridLayout(1, 2, 16, 0));
+        JPanel buttons = org.example.UI.panel(new GridLayout(1, 2, 16, 0));
 
-        JButton btnExcel = UI.btnPrimary("⬇  Export Sales Excel (.xlsx)");
-        JButton btnBill  = UI.btnAmber("⬇  Download Latest Bill (.pdf)");
+        JButton btnExcel = org.example.UI.btnPrimary("⬇  Export Sales Excel (.xlsx)");
+        JButton btnBill  = org.example.UI.btnAmber("⬇  Download Latest Bill (.pdf)");
 
         btnExcel.setPreferredSize(new Dimension(0, 52));
         btnBill.setPreferredSize(new Dimension(0, 52));
@@ -48,7 +48,7 @@ public class ExportsPanel extends JPanel {
         status("Exporting…");
         SwingWorker<byte[], Void> w = new SwingWorker<byte[], Void>() {
             protected byte[] doInBackground() throws Exception {
-                return ApiClient.downloadExcel();
+                return org.example.ApiClient.downloadExcel();
             }
             protected void done() {
                 try {
@@ -77,7 +77,7 @@ public class ExportsPanel extends JPanel {
         status("Downloading bill…");
         SwingWorker<byte[], Void> w = new SwingWorker<byte[], Void>() {
             protected byte[] doInBackground() throws Exception {
-                return ApiClient.downloadBill(id);
+                return org.example.ApiClient.downloadBill(id);
             }
             protected void done() {
                 try {
