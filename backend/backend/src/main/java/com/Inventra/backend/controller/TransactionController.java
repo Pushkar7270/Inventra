@@ -1,5 +1,6 @@
 package com.Inventra.backend.controller;
 
+// ... (keep your existing imports) ...
 import com.Inventra.backend.Entity.Product;
 import com.Inventra.backend.Entity.Transaction;
 import com.Inventra.backend.Util.ExcelGenerator;
@@ -22,27 +23,17 @@ public class TransactionController {
     private PdfGenerator pdfGenerator;
     @Autowired
     private ExcelGenerator excelGenerator;
+
+    // ... (Keep downloadBill and downloadsalesExcel exactly the same) ...
     @GetMapping("/{id}/bill")
     public org.springframework.http.ResponseEntity<byte[]> downloadBill(@PathVariable Long id){
-        Transaction transaction = transactionRepository.findById(id).orElseThrow(() -> new RuntimeException("Product not found"));
-        Product product = productRepository.findById(id).orElseThrow(() -> new RuntimeException("Product not found"));
+        Transaction transaction = transactionRepository.findById(id).orElseThrow(() -> new RuntimeException("Transaction not found"));
+        Product product = productRepository.findById(transaction.getProductId()).orElse(new Product(0L, "Deleted Item", "N/A", 0.0, 0, 0));
         byte[] pdfBytes = pdfGenerator.generateBill(product, transaction);
         org.springframework.http.HttpHeaders headers = new org.springframework.http.HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_PDF);
         headers.setContentDispositionFormData("attachment", "bill" + id + ".pdf");
         return new org.springframework.http.ResponseEntity<>(pdfBytes, headers , org.springframework.http.HttpStatus.OK);
-
-    }
-    @GetMapping("{id}/chalan")
-    public org.springframework.http.ResponseEntity<byte[]> downloadChalan(@PathVariable Long id , @RequestParam Double lat , @RequestParam Double lng , @RequestParam String address){
-        Transaction transaction = transactionRepository.findById(id).orElseThrow(() -> new RuntimeException("Transaction not found"));
-        Product product = productRepository.findById(transaction.getProductId()).orElseThrow(() -> new RuntimeException("Product not found"));
-        byte[] pdfBytes = pdfGenerator.generateChalan(product, transaction , lat , lng , address);
-        org.springframework.http.HttpHeaders headers = new org.springframework.http.HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_PDF);
-        headers.setContentDispositionFormData("attachment", "Chalan" + id + ".pdf");
-        return new org.springframework.http.ResponseEntity<>(pdfBytes , headers , org.springframework.http.HttpStatus.OK);
-
     }
 
     @GetMapping("/export")
@@ -53,6 +44,25 @@ public class TransactionController {
         headers.setContentType(org.springframework.http.MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"));
         headers.setContentDispositionFormData("attachment", "sales_export.xlsx");
         return new org.springframework.http.ResponseEntity<>(excelBytes , headers , org.springframework.http.HttpStatus.OK);
+    }
 
+    // UPDATED CHALAN ENDPOINT
+    @GetMapping("{id}/chalan")
+    public org.springframework.http.ResponseEntity<byte[]> downloadChalan(
+            @PathVariable Long id,
+            @RequestParam(required = false, defaultValue = "") String address,
+            @RequestParam(required = false, defaultValue = "") String mapLink,
+            @RequestParam(required = false, defaultValue = "") String recipientName) { // NEW PARAMETER
+
+        Transaction transaction = transactionRepository.findById(id).orElseThrow(() -> new RuntimeException("Transaction not found"));
+        Product product = productRepository.findById(transaction.getProductId()).orElse(new Product(0L, "Deleted Item", "N/A", 0.0, 0, 0));
+
+        // Pass the new recipientName to the generator
+        byte[] pdfBytes = pdfGenerator.generateChalan(product, transaction, address, mapLink, recipientName);
+
+        org.springframework.http.HttpHeaders headers = new org.springframework.http.HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_PDF);
+        headers.setContentDispositionFormData("attachment", "Chalan" + id + ".pdf");
+        return new org.springframework.http.ResponseEntity<>(pdfBytes , headers , org.springframework.http.HttpStatus.OK);
     }
 }

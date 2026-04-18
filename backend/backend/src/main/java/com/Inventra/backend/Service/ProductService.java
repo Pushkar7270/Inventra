@@ -31,16 +31,15 @@ public class ProductService {
         return lowStockList;
     }
 
-    public Product processSale(Long productId , Integer quantitySold){
+    public Transaction processSale(Long productId , Integer quantitySold){
         Product product = productRepository.findById(productId).orElseThrow(() -> new RuntimeException("Product not found"));
         product.setCurrentStock(product.getCurrentStock() - quantitySold);
         Transaction transaction = new Transaction();
         transaction.setProductId(productId);
         transaction.setQuantity(quantitySold);
         transaction.setTotalPrice(product.getPrice() * quantitySold);
-        transactionRepository.save(transaction);
-        return productRepository.save(product);
-
+        productRepository.save(product);
+        return transactionRepository.save(transaction); // Return the transaction!
     }
 
     public Product updateProduct(Long id , Product updatedData){
@@ -49,7 +48,7 @@ public class ProductService {
         existing.setPrice(updatedData.getPrice());
         existing.setSkuCode(updatedData.getSkuCode());
         existing.setReorderThreshold(updatedData.getReorderThreshold());
-
+        existing.setCurrentStock(updatedData.getCurrentStock());
         return productRepository.save(existing);
 
     }

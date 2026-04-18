@@ -26,7 +26,7 @@ public class ProductController {
         return productService.getLowStockProducts();
     }
     @PutMapping("/{id}/sell")
-    public Product sellProduct(@PathVariable Long id , @RequestParam Integer quantity){
+    public com.Inventra.backend.Entity.Transaction sellProduct(@PathVariable Long id , @RequestParam Integer quantity){
         return productService.processSale(id , quantity);
     }
     @PutMapping("/{id}")
