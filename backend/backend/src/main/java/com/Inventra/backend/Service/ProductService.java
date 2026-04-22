@@ -19,6 +19,9 @@ public class ProductService {
         return productRepository.findAll();
     }
     public Product addProduct(Product product){
+        if (product.getPrice() < 0 || product.getCurrentStock() < 0) {
+            throw new IllegalArgumentException("Price and stock cannot be negative numbers.");
+        }
         return productRepository.save(product);
     }
     public List<Product> getLowStockProducts(){
@@ -32,25 +35,39 @@ public class ProductService {
     }
 
     public Transaction processSale(Long productId , Integer quantitySold){
-        Product product = productRepository.findById(productId).orElseThrow(() -> new RuntimeException("Product not found"));
+        // Exceptional Case 1: Invalid Sale Quantity
+        if (quantitySold == null || quantitySold <= 0) {
+            throw new IllegalArgumentException("Sale quantity must be at least 1.");
+        }
+
+        Product product = productRepository.findById(productId)
+                .orElseThrow(() -> new RuntimeException("Product not found. Ensure the System Number is correct."));
+
+        // Exceptional Case 2: Insufficient Stock
+        if (product.getCurrentStock() < quantitySold) {
+            throw new IllegalStateException("Insufficient stock! Only " + product.getCurrentStock() + " items available for this product.");
+        }
+
         product.setCurrentStock(product.getCurrentStock() - quantitySold);
         Transaction transaction = new Transaction();
         transaction.setProductId(productId);
         transaction.setQuantity(quantitySold);
         transaction.setTotalPrice(product.getPrice() * quantitySold);
         productRepository.save(product);
-        return transactionRepository.save(transaction); // Return the transaction!
+        return transactionRepository.save(transaction);
     }
 
     public Product updateProduct(Long id , Product updatedData){
-        Product existing = productRepository.findById(id).orElseThrow(() -> new RuntimeException("Product not found"));
+        if (updatedData.getPrice() < 0 || updatedData.getCurrentStock() < 0) {
+            throw new IllegalArgumentException("Price and stock cannot be negative numbers.");
+        }
+        Product existing = productRepository.findById(id).orElseThrow(() -> new RuntimeException("Product not found in the database."));
         existing.setName(updatedData.getName());
         existing.setPrice(updatedData.getPrice());
         existing.setSkuCode(updatedData.getSkuCode());
         existing.setReorderThreshold(updatedData.getReorderThreshold());
         existing.setCurrentStock(updatedData.getCurrentStock());
         return productRepository.save(existing);
-
     }
 
     public void deleteProduct(Long id){

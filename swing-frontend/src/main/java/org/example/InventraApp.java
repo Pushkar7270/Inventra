@@ -123,40 +123,46 @@ public class InventraApp extends JFrame {
         JTextField txtName = new JTextField();
         JTextField txtSku = new JTextField();
         JTextField txtPrice = new JTextField();
-        JTextField txtStock = new JTextField();
-        JTextField txtThreshold = new JTextField();
+        JTextField txtStock = new JTextField("1"); // Default to 1
+        JTextField txtThreshold = new JTextField("5");
+
+        JPanel stockSpinner = createQuantitySpinner(txtStock);
 
         Object[] message = {
                 "Item Name:", txtName, "Barcode (Optional):", txtSku,
-                "Selling Price ($):", txtPrice, "Initial Stock Amount:", txtStock,
+                "Selling Price ($):", txtPrice, "Initial Stock Amount:", stockSpinner,
                 "Warn me when stock drops below:", txtThreshold
         };
 
         if (JOptionPane.showConfirmDialog(this, message, "Add Item", JOptionPane.OK_CANCEL_OPTION) == JOptionPane.OK_OPTION) {
             try {
+                if (txtName.getText().trim().isEmpty()) throw new Exception("Item name cannot be empty.");
+
                 String json = String.format("{\"name\":\"%s\", \"skuCode\":\"%s\", \"price\":%s, \"currentStock\":%s, \"reorderThreshold\":%s}",
                         txtName.getText(), txtSku.getText(), txtPrice.getText(), txtStock.getText(), txtThreshold.getText());
                 apiClient.addProduct(json);
                 refreshTableData();
             } catch (Exception ex) {
-                JOptionPane.showMessageDialog(this, "Error: Make sure Price and Stock are numbers.", "Oops!", JOptionPane.ERROR_MESSAGE);
+                JOptionPane.showMessageDialog(this, "Error: " + ex.getMessage(), "Oops!", JOptionPane.ERROR_MESSAGE);
             }
         }
     }
 
     private void simpleEditProduct() {
         String idStr = JOptionPane.showInputDialog(this, "Enter the 'System Number' of the item you want to edit:");
-        if (idStr == null || idStr.isEmpty()) return;
+        if (idStr == null || idStr.trim().isEmpty()) return;
 
         JTextField txtName = new JTextField();
         JTextField txtSku = new JTextField();
         JTextField txtPrice = new JTextField();
-        JTextField txtStock = new JTextField();
+        JTextField txtStock = new JTextField("1");
         JTextField txtThreshold = new JTextField();
+
+        JPanel stockSpinner = createQuantitySpinner(txtStock);
 
         Object[] message = {
                 "Update Name:", txtName, "Update Barcode:", txtSku,
-                "Update Price ($):", txtPrice, "Update Stock Amount (Restock):", txtStock,
+                "Update Price ($):", txtPrice, "Update Stock Amount (Restock):", stockSpinner,
                 "Update Low Stock Warning:", txtThreshold
         };
 
@@ -168,7 +174,7 @@ public class InventraApp extends JFrame {
                 refreshTableData();
                 JOptionPane.showMessageDialog(this, "Item updated successfully!");
             } catch (Exception ex) {
-                JOptionPane.showMessageDialog(this, "Error updating item. Ensure all fields are valid.", "Oops!", JOptionPane.ERROR_MESSAGE);
+                JOptionPane.showMessageDialog(this, "Error: " + ex.getMessage(), "Oops!", JOptionPane.ERROR_MESSAGE);
             }
         }
     }
@@ -191,14 +197,18 @@ public class InventraApp extends JFrame {
 
     private void simpleSellProduct() {
         JTextField txtId = new JTextField();
-        JTextField txtQty = new JTextField();
+        JTextField txtQty = new JTextField("1");
 
-        Object[] message = { "Enter System Number:", txtId, "How many are they buying?", txtQty };
+        JPanel qtySpinner = createQuantitySpinner(txtQty);
+
+        Object[] message = { "Enter System Number:", txtId, "How many are they buying?", qtySpinner };
 
         if (JOptionPane.showConfirmDialog(this, message, "Sell an Item", JOptionPane.OK_CANCEL_OPTION) == JOptionPane.OK_OPTION) {
             try {
-                Long productId = Long.parseLong(txtId.getText());
-                int qty = Integer.parseInt(txtQty.getText());
+                if (txtId.getText().trim().isEmpty()) throw new Exception("System number is required.");
+
+                Long productId = Long.parseLong(txtId.getText().trim());
+                int qty = Integer.parseInt(txtQty.getText().trim());
 
                 Long receiptNumber = apiClient.processSale(productId, qty);
                 refreshTableData();
@@ -217,7 +227,9 @@ public class InventraApp extends JFrame {
                 }
 
             } catch (Exception ex) {
-                JOptionPane.showMessageDialog(this, "Oops! Please type a valid number.", "Hold on!", JOptionPane.ERROR_MESSAGE);
+                // UPDATED: Now dynamically displays the error thrown by the backend
+                String msg = ex.getMessage() != null ? ex.getMessage() : "Oops! Please type a valid number.";
+                JOptionPane.showMessageDialog(this, msg, "Hold on!", JOptionPane.ERROR_MESSAGE);
             }
         }
     }
@@ -314,5 +326,45 @@ public class InventraApp extends JFrame {
         }
 
         SwingUtilities.invokeLater(() -> new InventraApp().setVisible(true));
+    }
+    // Helper method to create a - [ text field ] + layout
+    private JPanel createQuantitySpinner(JTextField textField) {
+        JPanel panel = new JPanel(new BorderLayout(5, 0));
+        JButton btnMinus = new JButton("-");
+        JButton btnPlus = new JButton("+");
+
+        btnMinus.setBackground(new Color(60, 60, 60));
+        btnMinus.setForeground(Color.WHITE);
+        btnPlus.setBackground(new Color(60, 60, 60));
+        btnPlus.setForeground(Color.WHITE);
+
+        textField.setHorizontalAlignment(JTextField.CENTER);
+        if (textField.getText().trim().isEmpty()) {
+            textField.setText("1");
+        }
+
+        btnMinus.addActionListener(e -> {
+            try {
+                int val = Integer.parseInt(textField.getText().trim());
+                if (val > 0) textField.setText(String.valueOf(val - 1)); // Prevent negative quantities
+            } catch (NumberFormatException ex) {
+                textField.setText("0");
+            }
+        });
+
+        btnPlus.addActionListener(e -> {
+            try {
+                int val = Integer.parseInt(textField.getText().trim());
+                textField.setText(String.valueOf(val + 1));
+            } catch (NumberFormatException ex) {
+                textField.setText("1");
+            }
+        });
+
+        panel.add(btnMinus, BorderLayout.WEST);
+        panel.add(textField, BorderLayout.CENTER);
+        panel.add(btnPlus, BorderLayout.EAST);
+        panel.setOpaque(false);
+        return panel;
     }
 }

@@ -58,6 +58,19 @@ public class ApiClient {
                 .PUT(HttpRequest.BodyPublishers.noBody()).build();
         HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
 
+        // Catch backend exceptions (like 400 Bad Request or 500 Internal Error)
+        if (response.statusCode() >= 400) {
+            try {
+                JsonObject errorJson = JsonParser.parseString(response.body()).getAsJsonObject();
+                if (errorJson.has("message")) {
+                    throw new Exception(errorJson.get("message").getAsString());
+                }
+            } catch (com.google.gson.JsonSyntaxException e) {
+                // If it's not JSON, fallback to standard message
+            }
+            throw new Exception("Action rejected by server (Status " + response.statusCode() + "). Check stock availability.");
+        }
+
         JsonObject jsonObject = JsonParser.parseString(response.body()).getAsJsonObject();
         return jsonObject.get("id").getAsLong();
     }
