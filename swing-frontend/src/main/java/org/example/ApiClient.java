@@ -1,6 +1,7 @@
 package org.example;
 
 import com.google.gson.Gson;
+import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.google.gson.reflect.TypeToken;
@@ -30,6 +31,12 @@ public class ApiClient {
         return gson.fromJson(response.body(), new TypeToken<List<Product>>(){}.getType());
     }
 
+    public JsonArray getAllTransactions() throws Exception {
+        HttpRequest request = HttpRequest.newBuilder().uri(URI.create(BASE_URL + "/transactions")).GET().build();
+        HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+        return JsonParser.parseString(response.body()).getAsJsonArray();
+    }
+
     public void addProduct(String jsonPayload) throws Exception {
         HttpRequest request = HttpRequest.newBuilder().uri(URI.create(BASE_URL + "/products"))
                 .header("Content-Type", "application/json")
@@ -37,7 +44,6 @@ public class ApiClient {
         client.send(request, HttpResponse.BodyHandlers.ofString());
     }
 
-    // NEW: Edit/Restock Product
     public void updateProduct(Long id, String jsonPayload) throws Exception {
         HttpRequest request = HttpRequest.newBuilder().uri(URI.create(BASE_URL + "/products/" + id))
                 .header("Content-Type", "application/json")
@@ -45,20 +51,17 @@ public class ApiClient {
         client.send(request, HttpResponse.BodyHandlers.ofString());
     }
 
-    // NEW: Delete Product
     public void deleteProduct(Long id) throws Exception {
         HttpRequest request = HttpRequest.newBuilder().uri(URI.create(BASE_URL + "/products/" + id)).DELETE().build();
         client.send(request, HttpResponse.BodyHandlers.ofString());
     }
 
-    // UPDATED: Now returns the Transaction ID (Receipt Number) so we can auto-download the bill!
     public Long processSale(Long productId, int quantity) throws Exception {
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create(BASE_URL + "/products/" + productId + "/sell?quantity=" + quantity))
                 .PUT(HttpRequest.BodyPublishers.noBody()).build();
         HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
 
-        // Catch backend exceptions (like 400 Bad Request or 500 Internal Error)
         if (response.statusCode() >= 400) {
             try {
                 JsonObject errorJson = JsonParser.parseString(response.body()).getAsJsonObject();
@@ -66,9 +69,8 @@ public class ApiClient {
                     throw new Exception(errorJson.get("message").getAsString());
                 }
             } catch (com.google.gson.JsonSyntaxException e) {
-                // If it's not JSON, fallback to standard message
             }
-            throw new Exception("Action rejected by server (Status " + response.statusCode() + "). Check stock availability.");
+            throw new Exception("Action rejected by server. Check stock availability.");
         }
 
         JsonObject jsonObject = JsonParser.parseString(response.body()).getAsJsonObject();
@@ -85,8 +87,6 @@ public class ApiClient {
         client.send(request, HttpResponse.BodyHandlers.ofFile(Paths.get(savePath)));
     }
 
-    // UPDATED: Now sends address and mapLink
-    // UPDATED: Now sends recipientName
     public void downloadChalan(Long transactionId, String address, String mapLink, String recipientName, String savePath) throws Exception {
         String encodedAddress = URLEncoder.encode(address != null ? address : "", StandardCharsets.UTF_8);
         String encodedLink = URLEncoder.encode(mapLink != null ? mapLink : "", StandardCharsets.UTF_8);

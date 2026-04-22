@@ -1,6 +1,7 @@
 package org.example;
 
 import com.formdev.flatlaf.FlatDarkLaf;
+import com.google.gson.JsonObject;
 
 import javax.swing.*;
 import javax.swing.table.DefaultTableCellRenderer;
@@ -13,15 +14,13 @@ public class InventraApp extends JFrame {
     private final ApiClient apiClient;
     private DefaultTableModel tableModel;
     private JTable productTable;
-
-    // NEW: We keep a list of the products in memory so the table knows which ones have low stock
     private List<org.example.Product> currentProducts;
 
     public InventraApp() {
         apiClient = new ApiClient();
 
         setTitle("My Shop Inventory");
-        setSize(900, 600);
+        setSize(1000, 650);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
         setLayout(new BorderLayout(10, 10));
@@ -39,22 +38,16 @@ public class InventraApp extends JFrame {
         productTable.setFont(new Font("SansSerif", Font.PLAIN, 16));
         productTable.getTableHeader().setFont(new Font("SansSerif", Font.BOLD, 16));
 
-        // --- NEW: THE PAINTBRUSH THAT HIGHLIGHTS LOW STOCK ROWS ---
         productTable.setDefaultRenderer(Object.class, new DefaultTableCellRenderer() {
             @Override
             public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
                 Component c = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
-
-                // Only change colors if the user hasn't clicked/selected the row
                 if (!isSelected && currentProducts != null && row < currentProducts.size()) {
                     org.example.Product p = currentProducts.get(row);
-
-                    // If the current stock is equal to or less than the warning limit, paint it RED!
                     if (p.getCurrentStock() <= p.getReorderThreshold()) {
-                        c.setBackground(new Color(110, 30, 30)); // Deep Dark Red
+                        c.setBackground(new Color(110, 30, 30));
                         c.setForeground(Color.WHITE);
                     } else {
-                        // Otherwise, keep it the normal dark theme color
                         c.setBackground(new Color(15, 15, 15));
                         c.setForeground(Color.WHITE);
                     }
@@ -67,21 +60,23 @@ public class InventraApp extends JFrame {
         scrollPane.setBorder(BorderFactory.createEmptyBorder(10, 20, 10, 20));
         add(scrollPane, BorderLayout.CENTER);
 
-        // --- BOTTOM BUTTONS ---
-        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 20, 20));
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 15, 20));
 
         JButton btnManage = createBigButton("📦 Manage Items", new Color(40, 40, 40));
         JButton btnSell = createBigButton("🛒 Sell an Item", new Color(180, 40, 40));
-        JButton btnExport = createBigButton("🖨️ Print / Download", new Color(40, 100, 40));
-        JButton btnRefresh = createBigButton("🔄 Refresh Screen", new Color(40, 40, 100));
+        JButton btnHistory = createBigButton("📜 Sales History", new Color(100, 40, 100));
+        JButton btnExport = createBigButton("📊 Excel Sheet", new Color(34, 197, 94));
+        JButton btnRefresh = createBigButton("🔄 Refresh", new Color(40, 40, 100));
 
         btnManage.addActionListener(e -> showManageMenu());
         btnSell.addActionListener(e -> simpleSellProduct());
-        btnExport.addActionListener(e -> simpleDownloadReports());
+        btnHistory.addActionListener(e -> showTransactionHistory());
+        btnExport.addActionListener(e -> downloadExcelDirectly());
         btnRefresh.addActionListener(e -> refreshTableData());
 
         buttonPanel.add(btnManage);
         buttonPanel.add(btnSell);
+        buttonPanel.add(btnHistory);
         buttonPanel.add(btnExport);
         buttonPanel.add(btnRefresh);
         add(buttonPanel, BorderLayout.SOUTH);
@@ -91,12 +86,53 @@ public class InventraApp extends JFrame {
 
     private JButton createBigButton(String text, Color bgColor) {
         JButton button = new JButton(text);
-        button.setFont(new Font("SansSerif", Font.BOLD, 16));
+        button.setFont(new Font("SansSerif", Font.BOLD, 15));
         button.setBackground(bgColor);
         button.setForeground(Color.WHITE);
         button.setFocusPainted(false);
-        button.setPreferredSize(new Dimension(200, 50));
+        button.setPreferredSize(new Dimension(180, 50));
         return button;
+    }
+
+    private JPanel createQuantitySpinner(JTextField textField) {
+        JPanel panel = new JPanel(new BorderLayout(5, 0));
+        JButton btnMinus = new JButton("-");
+        JButton btnPlus = new JButton("+");
+
+        btnMinus.setBackground(new Color(80, 80, 80));
+        btnMinus.setForeground(Color.WHITE);
+        btnMinus.setFont(new Font("SansSerif", Font.BOLD, 20));
+        btnMinus.setPreferredSize(new Dimension(50, 45));
+
+        btnPlus.setBackground(new Color(80, 80, 80));
+        btnPlus.setForeground(Color.WHITE);
+        btnPlus.setFont(new Font("SansSerif", Font.BOLD, 20));
+        btnPlus.setPreferredSize(new Dimension(50, 45));
+
+        textField.setHorizontalAlignment(JTextField.CENTER);
+        textField.setFont(new Font("SansSerif", Font.BOLD, 20));
+        textField.setPreferredSize(new Dimension(80, 45));
+        if (textField.getText().trim().isEmpty()) textField.setText("1");
+
+        btnMinus.addActionListener(e -> {
+            try {
+                int val = Integer.parseInt(textField.getText().trim());
+                if (val > 0) textField.setText(String.valueOf(val - 1));
+            } catch (Exception ex) { textField.setText("0"); }
+        });
+
+        btnPlus.addActionListener(e -> {
+            try {
+                int val = Integer.parseInt(textField.getText().trim());
+                textField.setText(String.valueOf(val + 1));
+            } catch (Exception ex) { textField.setText("1"); }
+        });
+
+        panel.add(btnMinus, BorderLayout.WEST);
+        panel.add(textField, BorderLayout.CENTER);
+        panel.add(btnPlus, BorderLayout.EAST);
+        panel.setOpaque(false);
+        return panel;
     }
 
     private void showManageMenu() {
@@ -123,23 +159,18 @@ public class InventraApp extends JFrame {
         JTextField txtName = new JTextField();
         JTextField txtSku = new JTextField();
         JTextField txtPrice = new JTextField();
-        JTextField txtStock = new JTextField("1"); // Default to 1
-        JTextField txtThreshold = new JTextField("5");
-
-        JPanel stockSpinner = createQuantitySpinner(txtStock);
+        JTextField txtStock = new JTextField("1");
 
         Object[] message = {
                 "Item Name:", txtName, "Barcode (Optional):", txtSku,
-                "Selling Price ($):", txtPrice, "Initial Stock Amount:", stockSpinner,
-                "Warn me when stock drops below:", txtThreshold
+                "Selling Price (₹):", txtPrice, "Initial Stock Amount:", createQuantitySpinner(txtStock)
         };
 
         if (JOptionPane.showConfirmDialog(this, message, "Add Item", JOptionPane.OK_CANCEL_OPTION) == JOptionPane.OK_OPTION) {
             try {
                 if (txtName.getText().trim().isEmpty()) throw new Exception("Item name cannot be empty.");
-
-                String json = String.format("{\"name\":\"%s\", \"skuCode\":\"%s\", \"price\":%s, \"currentStock\":%s, \"reorderThreshold\":%s}",
-                        txtName.getText(), txtSku.getText(), txtPrice.getText(), txtStock.getText(), txtThreshold.getText());
+                String json = String.format("{\"name\":\"%s\", \"skuCode\":\"%s\", \"price\":%s, \"currentStock\":%s}",
+                        txtName.getText(), txtSku.getText(), txtPrice.getText(), txtStock.getText());
                 apiClient.addProduct(json);
                 refreshTableData();
             } catch (Exception ex) {
@@ -149,49 +180,52 @@ public class InventraApp extends JFrame {
     }
 
     private void simpleEditProduct() {
-        String idStr = JOptionPane.showInputDialog(this, "Enter the 'System Number' of the item you want to edit:");
+        String idStr = JOptionPane.showInputDialog(this, "Enter the 'System Number' from the table:");
         if (idStr == null || idStr.trim().isEmpty()) return;
 
-        JTextField txtName = new JTextField();
-        JTextField txtSku = new JTextField();
-        JTextField txtPrice = new JTextField();
-        JTextField txtStock = new JTextField("1");
-        JTextField txtThreshold = new JTextField();
+        try {
+            int displayIndex = Integer.parseInt(idStr.trim()) - 1;
+            if (displayIndex < 0 || displayIndex >= currentProducts.size()) throw new Exception("Invalid System Number.");
+            Long actualDatabaseId = currentProducts.get(displayIndex).getId();
 
-        JPanel stockSpinner = createQuantitySpinner(txtStock);
+            JTextField txtName = new JTextField();
+            JTextField txtSku = new JTextField();
+            JTextField txtPrice = new JTextField();
+            JTextField txtStock = new JTextField("1");
 
-        Object[] message = {
-                "Update Name:", txtName, "Update Barcode:", txtSku,
-                "Update Price ($):", txtPrice, "Update Stock Amount (Restock):", stockSpinner,
-                "Update Low Stock Warning:", txtThreshold
-        };
+            Object[] message = {
+                    "Update Name:", txtName, "Update Barcode:", txtSku,
+                    "Update Price (₹):", txtPrice, "Update Stock Amount (Restock):", createQuantitySpinner(txtStock)
+            };
 
-        if (JOptionPane.showConfirmDialog(this, message, "Edit / Restock Item", JOptionPane.OK_CANCEL_OPTION) == JOptionPane.OK_OPTION) {
-            try {
-                String json = String.format("{\"name\":\"%s\", \"skuCode\":\"%s\", \"price\":%s, \"currentStock\":%s, \"reorderThreshold\":%s}",
-                        txtName.getText(), txtSku.getText(), txtPrice.getText(), txtStock.getText(), txtThreshold.getText());
-                apiClient.updateProduct(Long.parseLong(idStr), json);
+            if (JOptionPane.showConfirmDialog(this, message, "Edit / Restock Item", JOptionPane.OK_CANCEL_OPTION) == JOptionPane.OK_OPTION) {
+                String json = String.format("{\"name\":\"%s\", \"skuCode\":\"%s\", \"price\":%s, \"currentStock\":%s}",
+                        txtName.getText(), txtSku.getText(), txtPrice.getText(), txtStock.getText());
+                apiClient.updateProduct(actualDatabaseId, json);
                 refreshTableData();
                 JOptionPane.showMessageDialog(this, "Item updated successfully!");
-            } catch (Exception ex) {
-                JOptionPane.showMessageDialog(this, "Error: " + ex.getMessage(), "Oops!", JOptionPane.ERROR_MESSAGE);
             }
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(this, "Error: " + ex.getMessage(), "Oops!", JOptionPane.ERROR_MESSAGE);
         }
     }
 
     private void simpleDeleteProduct() {
-        String idStr = JOptionPane.showInputDialog(this, "Enter the 'System Number' of the item you want to DELETE:");
+        String idStr = JOptionPane.showInputDialog(this, "Enter the 'System Number' to DELETE:");
         if (idStr == null || idStr.isEmpty()) return;
 
-        int confirm = JOptionPane.showConfirmDialog(this, "Are you sure you want to permanently delete item #" + idStr + "?", "Confirm Delete", JOptionPane.YES_NO_OPTION);
-        if (confirm == JOptionPane.YES_OPTION) {
-            try {
-                apiClient.deleteProduct(Long.parseLong(idStr));
+        try {
+            int displayIndex = Integer.parseInt(idStr.trim()) - 1;
+            if (displayIndex < 0 || displayIndex >= currentProducts.size()) throw new Exception("Invalid System Number.");
+            Long actualDatabaseId = currentProducts.get(displayIndex).getId();
+
+            int confirm = JOptionPane.showConfirmDialog(this, "Permanently delete item #" + idStr + "?", "Confirm", JOptionPane.YES_NO_OPTION);
+            if (confirm == JOptionPane.YES_OPTION) {
+                apiClient.deleteProduct(actualDatabaseId);
                 refreshTableData();
-                JOptionPane.showMessageDialog(this, "Item deleted.");
-            } catch (Exception ex) {
-                JOptionPane.showMessageDialog(this, "Failed to delete item.", "Error", JOptionPane.ERROR_MESSAGE);
             }
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(this, "Error: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
         }
     }
 
@@ -199,22 +233,23 @@ public class InventraApp extends JFrame {
         JTextField txtId = new JTextField();
         JTextField txtQty = new JTextField("1");
 
-        JPanel qtySpinner = createQuantitySpinner(txtQty);
-
-        Object[] message = { "Enter System Number:", txtId, "How many are they buying?", qtySpinner };
+        Object[] message = { "Enter System Number:", txtId, "How many are they buying?", createQuantitySpinner(txtQty) };
 
         if (JOptionPane.showConfirmDialog(this, message, "Sell an Item", JOptionPane.OK_CANCEL_OPTION) == JOptionPane.OK_OPTION) {
             try {
                 if (txtId.getText().trim().isEmpty()) throw new Exception("System number is required.");
 
-                Long productId = Long.parseLong(txtId.getText().trim());
+                int displayIndex = Integer.parseInt(txtId.getText().trim()) - 1;
+                if (displayIndex < 0 || displayIndex >= currentProducts.size()) throw new Exception("Invalid System Number.");
+                Long actualDatabaseId = currentProducts.get(displayIndex).getId();
+
                 int qty = Integer.parseInt(txtQty.getText().trim());
 
-                Long receiptNumber = apiClient.processSale(productId, qty);
+                Long receiptNumber = apiClient.processSale(actualDatabaseId, qty);
                 refreshTableData();
 
                 int wantBill = JOptionPane.showConfirmDialog(this,
-                        "Sale successful! The stock is updated.\n\nDo you want to download the Customer Bill?",
+                        "Sale successful!\nDo you want to download the Customer Bill?",
                         "Download Bill?", JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE);
 
                 if (wantBill == JOptionPane.YES_OPTION) {
@@ -222,92 +257,159 @@ public class InventraApp extends JFrame {
                     fileChooser.setSelectedFile(new File("Customer_Bill_" + receiptNumber + ".pdf"));
                     if (fileChooser.showSaveDialog(this) == JFileChooser.APPROVE_OPTION) {
                         apiClient.downloadBill(receiptNumber, fileChooser.getSelectedFile().getAbsolutePath());
-                        JOptionPane.showMessageDialog(this, "Bill downloaded to your computer!");
+                        JOptionPane.showMessageDialog(this, "Bill downloaded!");
                     }
                 }
-
             } catch (Exception ex) {
-                // UPDATED: Now dynamically displays the error thrown by the backend
                 String msg = ex.getMessage() != null ? ex.getMessage() : "Oops! Please type a valid number.";
                 JOptionPane.showMessageDialog(this, msg, "Hold on!", JOptionPane.ERROR_MESSAGE);
             }
         }
     }
 
-    private void simpleDownloadReports() {
-        JDialog dialog = new JDialog(this, "Print / Download", true);
-        dialog.setSize(400, 400);
-        dialog.setLayout(new GridLayout(2, 1, 20, 20));
-        dialog.setLocationRelativeTo(this);
-        dialog.getContentPane().setBackground(new Color(15, 15, 15));
-        ((JPanel)dialog.getContentPane()).setBorder(BorderFactory.createEmptyBorder(30, 30, 30, 30));
+    private void showTransactionHistory() {
+        try {
+            com.google.gson.JsonArray transactions = apiClient.getAllTransactions();
 
-        JButton btnExcel = createBigButton("📊 Download Excel Spreadsheet", new Color(34, 197, 94));
-        JButton btnChalan = createBigButton("🚚 Generate Delivery Chalan", new Color(59, 130, 246));
+            JDialog dialog = new JDialog(this, "Sales History", true);
+            dialog.setSize(850, 500);
+            dialog.setLocationRelativeTo(this);
 
-        btnExcel.addActionListener(e -> {
-            dialog.dispose();
-            JFileChooser fileChooser = new JFileChooser();
-            fileChooser.setSelectedFile(new File("My_Sales.xlsx"));
-            if (fileChooser.showSaveDialog(this) == JFileChooser.APPROVE_OPTION) {
-                try {
-                    apiClient.exportSalesExcel(fileChooser.getSelectedFile().getAbsolutePath());
-                    JOptionPane.showMessageDialog(this, "Excel file saved successfully!");
-                } catch (Exception ex) {
-                    JOptionPane.showMessageDialog(this, "Failed to download Excel.");
+            // UI UPDATE: Changed column name to S.No
+            String[] columns = {"S.No", "Product Name", "Qty Sold", "Total (₹)", "Date", "Action"};
+            DefaultTableModel model = new DefaultTableModel(columns, 0) {
+                @Override
+                public boolean isCellEditable(int row, int column) {
+                    return column == 5;
                 }
-            }
-        });
-
-        btnChalan.addActionListener(e -> {
-            dialog.dispose();
-            JTextField txtId = new JTextField();
-            JTextField txtRecipient = new JTextField(); // NEW FIELD!
-            JTextField txtAddress = new JTextField();
-            JTextField txtMapLink = new JTextField();
-
-            Object[] inputs = {
-                    "Enter Receipt Number:", txtId,
-                    "Recipient Name:", txtRecipient, // Added to the popup!
-                    "Delivery Address (Text):", txtAddress,
-                    "Google Maps Link (Optional):", txtMapLink
             };
 
-            if (JOptionPane.showConfirmDialog(this, inputs, "Delivery Info", JOptionPane.OK_CANCEL_OPTION) == JOptionPane.OK_OPTION) {
-                JFileChooser fileChooser = new JFileChooser();
-                fileChooser.setSelectedFile(new File("Delivery_Chalan_" + txtId.getText() + ".pdf"));
-                if (fileChooser.showSaveDialog(this) == JFileChooser.APPROVE_OPTION) {
-                    try {
-                        apiClient.downloadChalan(
-                                Long.parseLong(txtId.getText()),
-                                txtAddress.getText(),
-                                txtMapLink.getText(),
-                                txtRecipient.getText(), // Pass it to the API
-                                fileChooser.getSelectedFile().getAbsolutePath()
-                        );
-                        JOptionPane.showMessageDialog(this, "Delivery Chalan saved!");
-                    } catch (Exception ex) {
-                        JOptionPane.showMessageDialog(this, "Failed to download Chalan. Check Receipt Number.");
+            // NEW: Hidden list to store the actual DB IDs so we don't display them
+            java.util.List<Long> transactionDbIds = new java.util.ArrayList<>();
+            int displaySequence = 1;
+
+            for (com.google.gson.JsonElement el : transactions) {
+                JsonObject t = el.getAsJsonObject();
+                Long pid = t.get("productId").getAsLong();
+                String pName = "Unknown/Deleted";
+
+                if (currentProducts != null) {
+                    for (org.example.Product p : currentProducts) {
+                        if (p.getId().equals(pid)) { pName = p.getName(); break; }
                     }
                 }
-            }
-        });
 
-        dialog.add(btnExcel); dialog.add(btnChalan);
-        dialog.setVisible(true);
+                // Add the real DB ID to our hidden mapping list
+                transactionDbIds.add(t.get("id").getAsLong());
+
+                // Add the sequence number to the table UI
+                model.addRow(new Object[]{
+                        displaySequence++, pName, t.get("quantity").getAsInt(),
+                        t.get("totalPrice").getAsDouble(), t.get("transactionDate").getAsString(), "Generate Chalan"
+                });
+            }
+
+            JTable table = new JTable(model);
+            table.setRowHeight(40);
+            table.setFont(new Font("SansSerif", Font.PLAIN, 14));
+
+            table.getColumn("Action").setCellRenderer(new ButtonRenderer());
+            // We pass the hidden list of IDs directly into the button editor
+            table.getColumn("Action").setCellEditor(new ButtonEditor(new JCheckBox(), transactionDbIds));
+
+            dialog.add(new JScrollPane(table));
+            dialog.setVisible(true);
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(this, "Failed to load transactions.");
+        }
+    }
+
+    private void promptAndDownloadChalan(Long transactionId) {
+        JTextField txtRecipient = new JTextField();
+        JTextField txtAddress = new JTextField();
+        JTextField txtMapLink = new JTextField();
+
+        Object[] inputs = {
+                "Recipient Name:", txtRecipient,
+                "Delivery Address (Text):", txtAddress,
+                "Google Maps Link (Optional):", txtMapLink
+        };
+
+        // UI UPDATE: We removed the "for Receipt #" here to hide the DB ID completely
+        if (JOptionPane.showConfirmDialog(this, inputs, "Delivery Info", JOptionPane.OK_CANCEL_OPTION) == JOptionPane.OK_OPTION) {
+            JFileChooser fileChooser = new JFileChooser();
+            fileChooser.setSelectedFile(new File("Delivery_Chalan.pdf"));
+            if (fileChooser.showSaveDialog(this) == JFileChooser.APPROVE_OPTION) {
+                try {
+                    apiClient.downloadChalan(transactionId, txtAddress.getText(), txtMapLink.getText(), txtRecipient.getText(), fileChooser.getSelectedFile().getAbsolutePath());
+                    JOptionPane.showMessageDialog(this, "Delivery Chalan saved!");
+                } catch (Exception ex) {
+                    JOptionPane.showMessageDialog(this, "Failed to download Chalan.");
+                }
+            }
+        }
+    }
+
+    class ButtonRenderer extends JButton implements javax.swing.table.TableCellRenderer {
+        public ButtonRenderer() { setOpaque(true); setBackground(new Color(59, 130, 246)); setForeground(Color.WHITE); }
+        public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
+            setText((value == null) ? "Generate Chalan" : value.toString());
+            return this;
+        }
+    }
+
+    class ButtonEditor extends DefaultCellEditor {
+        private JButton button;
+        private boolean isPushed;
+        private Long currentTransactionId;
+        private java.util.List<Long> transactionIds; // Added list reference
+
+        // Constructor now accepts the hidden mapping list
+        public ButtonEditor(JCheckBox checkBox, java.util.List<Long> transactionIds) {
+            super(checkBox);
+            this.transactionIds = transactionIds;
+            button = new JButton("Generate Chalan");
+            button.setOpaque(true);
+            button.setBackground(new Color(59, 130, 246));
+            button.setForeground(Color.WHITE);
+            button.addActionListener(e -> fireEditingStopped());
+        }
+        public Component getTableCellEditorComponent(JTable table, Object value, boolean isSelected, int row, int column) {
+            isPushed = true;
+            // Fetch the REAL database ID from the hidden list using the row number
+            currentTransactionId = transactionIds.get(row);
+            return button;
+        }
+        public Object getCellEditorValue() {
+            if (isPushed) promptAndDownloadChalan(currentTransactionId);
+            isPushed = false;
+            return "Generate Chalan";
+        }
+        public boolean stopCellEditing() { isPushed = false; return super.stopCellEditing(); }
+    }
+
+    private void downloadExcelDirectly() {
+        JFileChooser fileChooser = new JFileChooser();
+        fileChooser.setSelectedFile(new File("My_Sales.xlsx"));
+        if (fileChooser.showSaveDialog(this) == JFileChooser.APPROVE_OPTION) {
+            try {
+                apiClient.exportSalesExcel(fileChooser.getSelectedFile().getAbsolutePath());
+                JOptionPane.showMessageDialog(this, "Excel file saved successfully!");
+            } catch (Exception ex) {
+                JOptionPane.showMessageDialog(this, "Failed to download Excel.", "Error", JOptionPane.ERROR_MESSAGE);
+            }
+        }
     }
 
     private void refreshTableData() {
         try {
-            // NEW: Save the products to our memory list first
             currentProducts = apiClient.getAllProducts();
             tableModel.setRowCount(0);
+            int displaySequence = 1;
             for (org.example.Product p : currentProducts) {
-                tableModel.addRow(new Object[]{p.getId(), p.getSkuCode(), p.getName(), "$" + p.getPrice(), p.getCurrentStock()});
+                tableModel.addRow(new Object[]{displaySequence++, p.getSkuCode(), p.getName(), "₹" + p.getPrice(), p.getCurrentStock()});
             }
-        } catch (Exception e) {
-            System.err.println("Backend offline.");
-        }
+        } catch (Exception e) { System.err.println("Backend offline."); }
     }
 
     public static void main(String[] args) {
@@ -321,50 +423,8 @@ public class InventraApp extends JFrame {
             UIManager.put("TableHeader.background", new Color(20, 20, 20));
             UIManager.put("TextField.background", new Color(20, 20, 20));
             UIManager.put("Button.arc", 12);
-        } catch (Exception ex) {
-            System.err.println("Failed to initialize dark theme");
-        }
+        } catch (Exception ex) {}
 
         SwingUtilities.invokeLater(() -> new InventraApp().setVisible(true));
-    }
-    // Helper method to create a - [ text field ] + layout
-    private JPanel createQuantitySpinner(JTextField textField) {
-        JPanel panel = new JPanel(new BorderLayout(5, 0));
-        JButton btnMinus = new JButton("-");
-        JButton btnPlus = new JButton("+");
-
-        btnMinus.setBackground(new Color(60, 60, 60));
-        btnMinus.setForeground(Color.WHITE);
-        btnPlus.setBackground(new Color(60, 60, 60));
-        btnPlus.setForeground(Color.WHITE);
-
-        textField.setHorizontalAlignment(JTextField.CENTER);
-        if (textField.getText().trim().isEmpty()) {
-            textField.setText("1");
-        }
-
-        btnMinus.addActionListener(e -> {
-            try {
-                int val = Integer.parseInt(textField.getText().trim());
-                if (val > 0) textField.setText(String.valueOf(val - 1)); // Prevent negative quantities
-            } catch (NumberFormatException ex) {
-                textField.setText("0");
-            }
-        });
-
-        btnPlus.addActionListener(e -> {
-            try {
-                int val = Integer.parseInt(textField.getText().trim());
-                textField.setText(String.valueOf(val + 1));
-            } catch (NumberFormatException ex) {
-                textField.setText("1");
-            }
-        });
-
-        panel.add(btnMinus, BorderLayout.WEST);
-        panel.add(textField, BorderLayout.CENTER);
-        panel.add(btnPlus, BorderLayout.EAST);
-        panel.setOpaque(false);
-        return panel;
     }
 }

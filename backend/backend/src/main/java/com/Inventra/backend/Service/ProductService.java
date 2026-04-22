@@ -4,7 +4,6 @@ import com.Inventra.backend.Entity.Product;
 import com.Inventra.backend.Entity.Transaction;
 import com.Inventra.backend.repository.ProductRepository;
 import com.Inventra.backend.repository.TransactionRepository;
-import org.aspectj.weaver.ast.Or;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -15,19 +14,26 @@ import java.util.List;
 public class ProductService {
     @Autowired
     private ProductRepository productRepository;
+
+    @Autowired
+    private TransactionRepository transactionRepository;
+
     public List<Product> getAllProducts(){
         return productRepository.findAll();
     }
+
     public Product addProduct(Product product){
         if (product.getPrice() < 0 || product.getCurrentStock() < 0) {
             throw new IllegalArgumentException("Price and stock cannot be negative numbers.");
         }
+        product.setReorderThreshold((int) (product.getCurrentStock() * 0.3));
         return productRepository.save(product);
     }
+
     public List<Product> getLowStockProducts(){
         List<Product> lowStockList = new ArrayList<>();
         for (Product product : getAllProducts()){
-            if(product.getCurrentStock() < product.getReorderThreshold()){
+            if(product.getCurrentStock() <= product.getReorderThreshold()){
                 lowStockList.add(product);
             }
         }
@@ -35,7 +41,6 @@ public class ProductService {
     }
 
     public Transaction processSale(Long productId , Integer quantitySold){
-        // Exceptional Case 1: Invalid Sale Quantity
         if (quantitySold == null || quantitySold <= 0) {
             throw new IllegalArgumentException("Sale quantity must be at least 1.");
         }
@@ -43,9 +48,8 @@ public class ProductService {
         Product product = productRepository.findById(productId)
                 .orElseThrow(() -> new RuntimeException("Product not found. Ensure the System Number is correct."));
 
-        // Exceptional Case 2: Insufficient Stock
         if (product.getCurrentStock() < quantitySold) {
-            throw new IllegalStateException("Insufficient stock! Only " + product.getCurrentStock() + " items available for this product.");
+            throw new IllegalStateException("Exceeded stock limit");
         }
 
         product.setCurrentStock(product.getCurrentStock() - quantitySold);
@@ -65,8 +69,10 @@ public class ProductService {
         existing.setName(updatedData.getName());
         existing.setPrice(updatedData.getPrice());
         existing.setSkuCode(updatedData.getSkuCode());
-        existing.setReorderThreshold(updatedData.getReorderThreshold());
         existing.setCurrentStock(updatedData.getCurrentStock());
+
+        existing.setReorderThreshold((int) (updatedData.getCurrentStock() * 0.3));
+
         return productRepository.save(existing);
     }
 
@@ -77,7 +83,4 @@ public class ProductService {
     public Product getProductbySku(String skuCode){
         return productRepository.findBySkuCode(skuCode).orElseThrow(() -> new RuntimeException("Product not found"));
     }
-    @Autowired
-    private TransactionRepository transactionRepository;
-
 }

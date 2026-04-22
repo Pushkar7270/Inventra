@@ -1,6 +1,5 @@
 package com.Inventra.backend.controller;
 
-// ... (keep your existing imports) ...
 import com.Inventra.backend.Entity.Product;
 import com.Inventra.backend.Entity.Transaction;
 import com.Inventra.backend.Util.ExcelGenerator;
@@ -24,7 +23,11 @@ public class TransactionController {
     @Autowired
     private ExcelGenerator excelGenerator;
 
-    // ... (Keep downloadBill and downloadsalesExcel exactly the same) ...
+    @GetMapping
+    public java.util.List<Transaction> getAllTransactions(){
+        return transactionRepository.findAll();
+    }
+
     @GetMapping("/{id}/bill")
     public org.springframework.http.ResponseEntity<byte[]> downloadBill(@PathVariable Long id){
         Transaction transaction = transactionRepository.findById(id).orElseThrow(() -> new RuntimeException("Transaction not found"));
@@ -46,18 +49,16 @@ public class TransactionController {
         return new org.springframework.http.ResponseEntity<>(excelBytes , headers , org.springframework.http.HttpStatus.OK);
     }
 
-    // UPDATED CHALAN ENDPOINT
-    @GetMapping("{id}/chalan")
+    @GetMapping("/{id}/chalan")
     public org.springframework.http.ResponseEntity<byte[]> downloadChalan(
             @PathVariable Long id,
             @RequestParam(required = false, defaultValue = "") String address,
             @RequestParam(required = false, defaultValue = "") String mapLink,
-            @RequestParam(required = false, defaultValue = "") String recipientName) { // NEW PARAMETER
+            @RequestParam(required = false, defaultValue = "") String recipientName) {
 
         Transaction transaction = transactionRepository.findById(id).orElseThrow(() -> new RuntimeException("Transaction not found"));
         Product product = productRepository.findById(transaction.getProductId()).orElse(new Product(0L, "Deleted Item", "N/A", 0.0, 0, 0));
 
-        // Pass the new recipientName to the generator
         byte[] pdfBytes = pdfGenerator.generateChalan(product, transaction, address, mapLink, recipientName);
 
         org.springframework.http.HttpHeaders headers = new org.springframework.http.HttpHeaders();

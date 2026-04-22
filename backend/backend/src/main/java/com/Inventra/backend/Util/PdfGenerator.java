@@ -18,7 +18,6 @@ public class PdfGenerator {
     private QrCodeGenerator qrCodeGenerator;
 
     public byte[] generateBill(Product product , Transaction transaction){
-        // ... (Keep your generateBill method exactly the same) ...
         try (ByteArrayOutputStream out = new ByteArrayOutputStream();
              PDDocument document = new PDDocument()) {
 
@@ -37,7 +36,8 @@ public class PdfGenerator {
                 contentStream.newLineAtOffset(0, -20);
                 contentStream.showText("Quantity Sold: " + transaction.getQuantity());
                 contentStream.newLineAtOffset(0, -20);
-                contentStream.showText("Total Price: $" + transaction.getTotalPrice());
+                // Used Rs. here because standard Helvetica often breaks when rendering the ₹ symbol
+                contentStream.showText("Total Price: Rs. " + transaction.getTotalPrice());
                 contentStream.newLineAtOffset(0, -20);
                 contentStream.showText("Date: " + transaction.getTransactionDate().toString());
                 contentStream.endText();
@@ -49,7 +49,6 @@ public class PdfGenerator {
         }
     }
 
-    // UPDATED: Now takes recipientName
     public byte[] generateChalan(Product product, Transaction transaction, String deliveryAddress, String mapLink, String recipientName) {
         try (ByteArrayOutputStream out = new ByteArrayOutputStream();
              PDDocument document = new PDDocument()) {
@@ -68,26 +67,22 @@ public class PdfGenerator {
                 contentStream.showText("Inventra Delivery Chalan");
 
                 contentStream.setFont(PDType1Font.HELVETICA, 12);
-                contentStream.newLineAtOffset(0, -40); // y=660
+                contentStream.newLineAtOffset(0, -40);
                 contentStream.showText("Deliver To Product: " + product.getName());
 
-                contentStream.newLineAtOffset(0, -20); // y=640
+                contentStream.newLineAtOffset(0, -20);
                 contentStream.showText("Quantity to Deliver: " + transaction.getQuantity());
 
-                // NEW: Added Recipient Name
-                contentStream.newLineAtOffset(0, -20); // y=620
+                contentStream.newLineAtOffset(0, -20);
                 String displayRecipient = (recipientName != null && !recipientName.isEmpty()) ? recipientName : "Not Provided";
                 contentStream.showText("Recipient Name: " + displayRecipient);
 
-                // Moved address down a bit
-                contentStream.newLineAtOffset(0, -20); // y=600
+                contentStream.newLineAtOffset(0, -20);
                 String displayAddress = (deliveryAddress != null && !deliveryAddress.isEmpty()) ? deliveryAddress : "Not Provided";
                 if(displayAddress.length() > 70) displayAddress = displayAddress.substring(0, 67) + "...";
                 contentStream.showText("Delivery Address: " + displayAddress);
 
                 contentStream.endText();
-
-                // Draw QR Code
                 contentStream.drawImage(qrImage, 50, 420, 150, 150);
             }
 
