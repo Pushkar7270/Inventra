@@ -44,6 +44,7 @@ public class InventraApp extends JFrame {
                 Component c = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
                 if (!isSelected && currentProducts != null && row < currentProducts.size()) {
                     org.example.Product p = currentProducts.get(row);
+                    // Automatically highlight if stock drops below 30%
                     if (p.getCurrentStock() <= p.getReorderThreshold()) {
                         c.setBackground(new Color(110, 30, 30));
                         c.setForeground(Color.WHITE);
@@ -275,7 +276,6 @@ public class InventraApp extends JFrame {
             dialog.setSize(850, 500);
             dialog.setLocationRelativeTo(this);
 
-            // UI UPDATE: Changed column name to S.No
             String[] columns = {"S.No", "Product Name", "Qty Sold", "Total (₹)", "Date", "Action"};
             DefaultTableModel model = new DefaultTableModel(columns, 0) {
                 @Override
@@ -284,7 +284,6 @@ public class InventraApp extends JFrame {
                 }
             };
 
-            // NEW: Hidden list to store the actual DB IDs so we don't display them
             java.util.List<Long> transactionDbIds = new java.util.ArrayList<>();
             int displaySequence = 1;
 
@@ -299,10 +298,8 @@ public class InventraApp extends JFrame {
                     }
                 }
 
-                // Add the real DB ID to our hidden mapping list
                 transactionDbIds.add(t.get("id").getAsLong());
 
-                // Add the sequence number to the table UI
                 model.addRow(new Object[]{
                         displaySequence++, pName, t.get("quantity").getAsInt(),
                         t.get("totalPrice").getAsDouble(), t.get("transactionDate").getAsString(), "Generate Chalan"
@@ -314,7 +311,6 @@ public class InventraApp extends JFrame {
             table.setFont(new Font("SansSerif", Font.PLAIN, 14));
 
             table.getColumn("Action").setCellRenderer(new ButtonRenderer());
-            // We pass the hidden list of IDs directly into the button editor
             table.getColumn("Action").setCellEditor(new ButtonEditor(new JCheckBox(), transactionDbIds));
 
             dialog.add(new JScrollPane(table));
@@ -335,7 +331,6 @@ public class InventraApp extends JFrame {
                 "Google Maps Link (Optional):", txtMapLink
         };
 
-        // UI UPDATE: We removed the "for Receipt #" here to hide the DB ID completely
         if (JOptionPane.showConfirmDialog(this, inputs, "Delivery Info", JOptionPane.OK_CANCEL_OPTION) == JOptionPane.OK_OPTION) {
             JFileChooser fileChooser = new JFileChooser();
             fileChooser.setSelectedFile(new File("Delivery_Chalan.pdf"));
@@ -362,9 +357,8 @@ public class InventraApp extends JFrame {
         private JButton button;
         private boolean isPushed;
         private Long currentTransactionId;
-        private java.util.List<Long> transactionIds; // Added list reference
+        private java.util.List<Long> transactionIds;
 
-        // Constructor now accepts the hidden mapping list
         public ButtonEditor(JCheckBox checkBox, java.util.List<Long> transactionIds) {
             super(checkBox);
             this.transactionIds = transactionIds;
@@ -376,7 +370,6 @@ public class InventraApp extends JFrame {
         }
         public Component getTableCellEditorComponent(JTable table, Object value, boolean isSelected, int row, int column) {
             isPushed = true;
-            // Fetch the REAL database ID from the hidden list using the row number
             currentTransactionId = transactionIds.get(row);
             return button;
         }
