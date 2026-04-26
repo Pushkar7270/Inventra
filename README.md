@@ -168,9 +168,103 @@ The **My Shop Inventory** window will launch. You're all set!
 
 ## 📸 Screenshots
 
-| Inventory Dashboard | Sales History |
-|---|---|
-| *Main inventory table with low-stock alerts highlighted in red* | *Transaction log with one-click Chalan generation* |
+> 💡 **How to add images to this README:**
+>
+> 1. Create a folder called `docs/images/` in the root of your repository.
+> 2. Take a screenshot and save it there (e.g. `docs/images/dashboard.png`).
+> 3. Push the folder to GitHub.
+> 4. Replace each placeholder `img` tag below by swapping `docs/images/YOUR_FILENAME.png` with your actual filename. The `alt` text and caption beneath can also be updated to match.
+>
+> Alternatively, you can drag-and-drop an image directly into a GitHub Issue or PR comment box, copy the generated URL it gives you, and paste that URL into the `src=""` attribute below.
+
+---
+
+### 🖥️ Main Inventory Dashboard
+
+<!-- 
+  SCREENSHOT GUIDE — Inventory Dashboard:
+  Recommended: Take a screenshot of the main "My Shop Inventory" window
+  showing a few items in the table, ideally with one row highlighted red
+  to demonstrate the low-stock alert feature.
+  Save as: docs/images/dashboard.png
+-->
+
+<div align="center">
+  <img src="docs/images/dashboard.png" alt="Inventra — Main Inventory Dashboard showing items with low-stock alert highlighted in red" width="800"/>
+  <br/>
+  <em>Main inventory table — low-stock items are automatically highlighted in red</em>
+</div>
+
+---
+
+### 🛒 Sell an Item / POS Interface
+
+<!-- 
+  SCREENSHOT GUIDE — POS / Sell Dialog:
+  Recommended: Take a screenshot of the "Sell an Item" dialog box
+  open on screen, showing the System Number input and quantity spinner.
+  Save as: docs/images/sell_dialog.png
+-->
+
+<div align="center">
+  <img src="docs/images/sell_dialog.png" alt="Inventra — Sell an Item dialog with quantity spinner" width="500"/>
+  <br/>
+  <em>Cashier interface — select an item, set quantity, and process the sale in seconds</em>
+</div>
+
+---
+
+### 📜 Sales History & Chalan Generation
+
+<!-- 
+  SCREENSHOT GUIDE — Sales History:
+  Recommended: Take a screenshot of the Sales History dialog window
+  showing the transaction table with the "Generate Chalan" button visible
+  in the Action column.
+  Save as: docs/images/sales_history.png
+-->
+
+<div align="center">
+  <img src="docs/images/sales_history.png" alt="Inventra — Sales History window with Generate Chalan button" width="800"/>
+  <br/>
+  <em>Sales history log — every transaction is recorded with a one-click Chalan generator</em>
+</div>
+
+---
+
+### 📦 Generated Delivery Chalan (PDF)
+
+<!-- 
+  SCREENSHOT GUIDE — Chalan PDF:
+  Recommended: Take a screenshot of the generated Delivery_Chalan.pdf
+  open in a PDF viewer, showing the recipient details, item list,
+  and the embedded QR code.
+  Save as: docs/images/chalan_pdf.png
+-->
+
+<div align="center">
+  <img src="docs/images/chalan_pdf.png" alt="Inventra — Generated Delivery Chalan PDF with embedded GPS QR code" width="500"/>
+  <br/>
+  <em>Auto-generated Chalan PDF — includes recipient info, item details, and a scannable Google Maps QR code</em>
+</div>
+
+---
+
+### 📊 Excel Sales Export
+
+<!-- 
+  SCREENSHOT GUIDE — Excel Export:
+  Recommended: Take a screenshot of the My_Sales.xlsx file open in
+  Excel or LibreOffice, showing the Sales Data sheet with columns
+  and a few rows of transaction data.
+  Save as: docs/images/excel_export.png
+-->
+
+<div align="center">
+  <img src="docs/images/excel_export.png" alt="Inventra — Excel sales export with Product Name, Price, Quantity, Total, and Date columns" width="800"/>
+  <br/>
+  <em>One-click Excel export — structured and ready for direct import into accounting software</em>
+</div>
 
 ---
 
